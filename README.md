@@ -4,7 +4,7 @@
 **College Email ID:** sharan.r2022@vitstudent.ac.in  
 **College / Campus:** VELLORE INSTITUTE OF TECHNOLOGY (VIT)  
 **Demo Video Link:** PENDING - (https://www.youtube.com/watch?v=ZPv2rUbuRqI)  
-**Slide Deck Link:** [Seven-slide PDF](https://drive.google.com/file/d/1C37-XNJcqg-1wYInj7C9UjulbzjVnrGY/view?usp=sharing) · [https://drive.google.com/file/d/1C37-XNJcqg-1wYInj7C9UjulbzjVnrGY/view?usp=sharing].
+**Slide Deck Link:** [Seven-slide PDF](https://drive.google.com/file/d/1C37-XNJcqg-1wYInj7C9UjulbzjVnrGY/view?usp=sharing) · [https://drive.google.com/file/d/1C37-XNJcqg-1wYInj7C9UjulbzjVnrGY/view?usp=sharing]                                                  
 **Public Repository:** [vit-sharan-r-hackathon](https://github.com/shaaran-r/vit-sharan-r-hackathon)
 
 ## 1. Project Overview / Problem Statement & Approach
