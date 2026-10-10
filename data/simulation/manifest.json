@@ -1,0 +1,14 @@
+{
+  "data_origin": "synthetic",
+  "seed": 20261008,
+  "generated_at": "2026-10-08T10:58:25+00:00",
+  "event_count": 12000,
+  "holdings_count": 2400,
+  "entities_count": 240,
+  "currency": "GBP",
+  "baseline_value": 14685727454.43,
+  "tick_seconds": 10,
+  "events_per_tick": 6,
+  "window_size": 120,
+  "methodology": "Seeded template generation with fictional companies and bounded sensitivities. Clock-driven replay cycles through the corpus; not observed prices, posts or transactions."
+}
