@@ -93,15 +93,19 @@ organizer-provided transactions or actual bank customer data.
 | Dataset | Source | Size and purpose |
 | --- | --- | --- |
 | Live news | [BBC Business RSS](https://feeds.bbci.co.uk/news/business/rss.xml) and [CNBC RSS](https://www.cnbc.com/id/10001147/device/rss/rss.html) | Up to 25 headlines per publisher per collection; URLs and publication timestamps retained |
-| Synthetic news/social | [Local seeded generator](src/simulation.py), seed 20261008 | 12,000 fictional records: 6,000 news and 6,000 social posts; five event categories plus General Market |
+| Synthetic news/social | [Local seeded generator](src/simulation.py), seed 20261008 | 12,000 fictional records: 6,000 news and 6,000 social-style records; five event categories plus General Market |
 | Synthetic portfolio | Same local generator | 2,400 holdings across 240 fictional issuers, five asset types, six sectors and four regions |
 | Quick-start cases | [Authored examples](src/dashboard/examples.py) | Six editable fictional cases for sentiment, classification and threshold demonstrations |
 | Optional uploaded portfolio | User-provided authorized, non-confidential CSV | Source, valuation date and currency declared by the user; not independently verified |
 
 Downloadable demo data is stored in [events.jsonl](data/simulation/events.jsonl),
 [portfolio.csv](data/simulation/portfolio.csv) and
-[manifest.json](data/simulation/manifest.json). The manifest records generation
-time, seed, counts, baseline value and methodology.
+[manifest.json](data/simulation/manifest.json). The
+[dataset guide](data/DATASET_README.md) explains the fields, provenance,
+assumptions and regeneration command. Live RSS articles are not redistributed
+in the synthetic dataset package; their public source URLs are listed above.
+For convenient transfer, download the complete
+[synthetic dataset archive](docs/signal_stress_synthetic_dataset.zip).
 
 ### Assumptions and limitations
 
