@@ -279,20 +279,3 @@ No measured analyst-time saving, investment return or production accuracy is
 claimed. Further work includes unseen-headline evaluation, calibrated impact
 estimation, exposure-specific shocks and fuller derivative valuation.
 
-### Suggested reviewer demo
-
-1. Open Overview: confirm live publisher labels and trained FinBERT status.
-2. Open Analyze text: load Debt default, submit and inspect highlighted cues.
-3. Inspect the event/impact result and baseline-versus-stressed portfolio.
-4. Set threshold to 8 and demonstrate a geopolitical event with impact >7.
-5. Open Dataset studio: review provenance, allocations and full downloads.
-6. Show API documentation and the test command.
-
-### Submission checklist
-
-- [x] Candidate details, setup, architecture, dataset assumptions and results.
-- [x] MIT license, source code, sample data, six-slide PDF and architecture PNG.
-- [ ] Publish a public repository named `vit-sharan-r-hackathon`.
-- [ ] Replace the repository URL placeholder with the actual URL.
-- [ ] Record/upload the demo and replace the demo-video placeholder.
-- [ ] Review the deck, links and fresh-clone setup before final submission.
