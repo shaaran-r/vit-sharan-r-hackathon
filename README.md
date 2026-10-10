@@ -4,7 +4,7 @@
 **College Email ID:** sharan.r2022@vitstudent.ac.in  
 **College / Campus:** VELLORE INSTITUTE OF TECHNOLOGY (VIT)  
 **Demo Video Link:** PENDING - (https://www.youtube.com/watch?v=ZPv2rUbuRqI)  
-**Slide Deck Link:** [Six-slide presentation](docs/presentation.pdf)  
+**Slide Deck Link:** [Seven-slide PDF](docs/presentation.pdf) · [Interactive deck with presenter notes](docs/presentation.html)
 **Public Repository:** [vit-sharan-r-hackathon](https://github.com/shaaran-r/vit-sharan-r-hackathon)
 
 ## 1. Project Overview / Problem Statement & Approach
@@ -73,6 +73,7 @@ vit-sharan-r-hackathon/
 |   `-- manifest.json
 |-- docs/
 |   |-- presentation.pdf
+|   |-- presentation.html
 |   |-- architecture.png
 |   `-- generate_assets.py
 `-- tests/
@@ -174,6 +175,9 @@ python run_demo.py
 Generate demo datasets once before startup; regeneration replaces only the
 three named simulation files. Restart the API to reload its cached catalogue.
 The launcher starts the API and dashboard; stop with Ctrl+C.
+The dashboard header includes a decorative animated workflow and subtle hover
+effects. Animation does not indicate actual collection activity and respects
+the operating system's reduced-motion preference.
 
 ### FinBERT model setup
 
@@ -224,8 +228,8 @@ python -m compileall -q src tests run_demo.py
 The latest verified suite passed 37 tests. Artificial test records remain in
 tests. Tests validate behavior, not predictive financial accuracy.
 
-To regenerate the diagram and six-slide PDF using Pillow (already included by
-the dashboard dependency):
+To regenerate the architecture diagram, seven-slide PDF, and interactive
+HTML presentation using Pillow (already included by the dashboard dependency):
 
 ```powershell
 python docs\generate_assets.py
@@ -278,4 +282,3 @@ headline -> structured signal -> threshold -> shock -> portfolio estimate.
 No measured analyst-time saving, investment return or production accuracy is
 claimed. Further work includes unseen-headline evaluation, calibrated impact
 estimation, exposure-specific shocks and fuller derivative valuation.
-

@@ -1,6 +1,9 @@
-"""Generate the submission architecture PNG and six-slide PDF using Pillow."""
+"""Generate the submission architecture and seven-slide presentation assets."""
 
+import base64
+import html
 import os
+from io import BytesIO
 from pathlib import Path
 
 from PIL import Image, ImageDraw, ImageFont
@@ -10,6 +13,7 @@ ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "docs"
 WIDTH, HEIGHT = 2560, 1440
 BG, CARD, WHITE, MUTED, ACCENT = "#08111f", "#102137", "#eef5ff", "#b6c7da", "#63d6c4"
+BLUE, AMBER, ROSE = "#57a6f7", "#ffb020", "#f16474"
 
 
 def font(size: int, bold: bool = False):
@@ -42,44 +46,6 @@ def paragraph(draw, text, xy, width, size=38, color=MUTED):
         draw.text((x, y), line, font=font(size), fill=color)
         y += int(size * 1.45)
     return y
-
-
-def page(title, subtitle, number):
-    image = Image.new("RGB", (WIDTH, HEIGHT), BG)
-    draw = ImageDraw.Draw(image)
-    draw.rectangle((0, 0, WIDTH, 18), fill=ACCENT)
-    draw.text((100, 70), "SIGNAL & STRESS  |  S&P GLOBAL & CRISIL CAMPUS HACKATHON",
-              font=font(27, True), fill=ACCENT)
-    draw.text((100, 140), title, font=font(76, True), fill=WHITE)
-    paragraph(draw, subtitle, (104, 250), WIDTH - 210, 34)
-    draw.line((100, 1320, WIDTH - 100, 1320), fill="#34506d", width=2)
-    draw.text((100, 1350), "SHARAN R  |  VELLORE INSTITUTE OF TECHNOLOGY (VIT)",
-              font=font(26), fill=MUTED)
-    draw.text((WIDTH - 160, 1350), f"{number}/6", font=font(26), fill=ACCENT)
-    return image
-
-
-def bullets(image, items):
-    draw = ImageDraw.Draw(image)
-    y = 380
-    for heading, body in items:
-        draw.rounded_rectangle((100, y, WIDTH - 100, y + 188), radius=20, fill=CARD)
-        draw.text((140, y + 24), heading, font=font(40, True), fill=ACCENT)
-        end = paragraph(draw, body, (140, y + 83), WIDTH - 300, 34)
-        if end > y + 187:
-            raise ValueError(f"Slide content overflows: {heading}")
-        y += 215
-    if y > 1310:
-        raise ValueError("Too many slide cards")
-
-
-def vtext(base, text, xy, face, fill):
-    """Draw text rotated 90 degrees (bottom-to-top) for swim-lane labels."""
-    bbox = face.getbbox(text)
-    w, h = bbox[2] - bbox[0] + 6, bbox[3] - bbox[1] + 6
-    chip = Image.new("RGBA", (w, h), (0, 0, 0, 0))
-    ImageDraw.Draw(chip).text((3, 3), text, font=face, fill=fill)
-    base.paste(chip.rotate(90, expand=True), xy, chip.rotate(90, expand=True))
 
 
 def chip(draw, xy, text, color):
@@ -282,63 +248,431 @@ def architecture():
     return image
 
 
+def slide_frame(title: str, subtitle: str, number: int, section: str) -> Image.Image:
+    image = Image.new("RGB", (WIDTH, HEIGHT), BG)
+    draw = ImageDraw.Draw(image)
+    draw.rectangle((0, 0, WIDTH, 14), fill=ACCENT)
+    draw.text((92, 50), section.upper(), font=font(24, True), fill=ACCENT)
+    title_size = 66
+    title_face = font(title_size, True)
+    while draw.textlength(title, font=title_face) > WIDTH - 192 and title_size > 42:
+        title_size -= 2
+        title_face = font(title_size, True)
+    draw.text((92, 92), title, font=title_face, fill=WHITE)
+    paragraph(draw, subtitle, (96, 178), WIDTH - 192, 29, MUTED)
+    draw.line((92, 1320, WIDTH - 92, 1320), fill="#2b4058", width=2)
+    draw.text((94, 1345), "SHARAN R  |  VELLORE INSTITUTE OF TECHNOLOGY", font=font(20, True), fill=MUTED)
+    draw.text((WIDTH - 148, 1345), f"{number:02d} / 07", font=font(20, True), fill=ACCENT)
+    return image
+
+
+def panel(draw, bounds, heading: str, color: str = ACCENT, fill: str = CARD) -> None:
+    x0, y0, x1, y1 = bounds
+    draw.rounded_rectangle((x0 + 4, y0 + 7, x1 + 4, y1 + 7), radius=18, fill="#03070d")
+    draw.rounded_rectangle(bounds, radius=18, fill=fill, outline="#25405c", width=2)
+    draw.rectangle((x0 + 2, y0 + 22, x0 + 8, y1 - 22), fill=color)
+    draw.text((x0 + 28, y0 + 24), heading, font=font(25, True), fill=color)
+
+
+def wrapped_text(draw, text: str, xy: tuple[int, int], width: int, size: int = 24,
+                 color: str = MUTED, gap: float = 1.45) -> int:
+    x, y = xy
+    face = font(size)
+    for line in wrap(draw, text, width, face):
+        draw.text((x, y), line, font=face, fill=color)
+        y += int(size * gap)
+    return y
+
+
+def tag(draw, xy: tuple[int, int], text: str, color: str) -> int:
+    x, y = xy
+    face = font(17, True)
+    width = int(draw.textlength(text, font=face) + 28)
+    draw.rounded_rectangle((x, y, x + width, y + 34), radius=17, fill=color)
+    draw.text((x + 14, y + 7), text, font=face, fill="#06101d")
+    return width
+
+
+def draw_cover() -> Image.Image:
+    image = Image.new("RGB", (WIDTH, HEIGHT), BG)
+    draw = ImageDraw.Draw(image)
+    draw.rectangle((0, 0, WIDTH, 16), fill=ACCENT)
+    draw.text((100, 78), "S&P GLOBAL & CRISIL  |  CAMPUS HACKATHON 2026", font=font(23, True), fill=ACCENT)
+    draw.text((100, 190), "SIGNAL", font=font(132, True), fill=WHITE)
+    draw.text((100, 326), "& STRESS", font=font(132, True), fill=ACCENT)
+    wrapped_text(
+        draw,
+        "From unstructured financial news to transparent portfolio stress scenarios.",
+        (108, 520), 1190, 37, WHITE,
+    )
+    draw.text((108, 730), "AI / NLP RISK ENGINE", font=font(22, True), fill=MUTED)
+    draw.text((108, 770), "+ MODULE B: STRATEGIC PORTFOLIO STRESS TESTING", font=font(22, True), fill=MUTED)
+
+    # A restrained three-stage visual establishes the narrative without implying
+    # that this illustrative decoration is a live-data status indicator.
+    nodes = [(1585, "HEADLINE", "#2ec4b6"), (1980, "RISK SIGNAL", BLUE), (2350, "SCENARIO", ROSE)]
+    for idx in range(len(nodes) - 1):
+        x0, _label, _color = nodes[idx]
+        x1, _label2, _color2 = nodes[idx + 1]
+        draw.line((x0, 420, x1, 420), fill="#35536c", width=5)
+        draw.polygon([(x1 - 15, 420), (x1 - 32, 409), (x1 - 32, 431)], fill="#35536c")
+    for x, label, color in nodes:
+        draw.ellipse((x - 58, 362, x + 58, 478), fill=CARD, outline=color, width=5)
+        draw.ellipse((x - 14, 406, x + 14, 434), fill=color)
+        label_w = draw.textlength(label, font=font(18, True))
+        draw.text((x - label_w / 2, 510), label, font=font(18, True), fill=WHITE)
+
+    draw.line((100, 1115, WIDTH - 100, 1115), fill="#2b4058", width=2)
+    draw.text((104, 1156), "SHARAN R", font=font(30, True), fill=WHITE)
+    draw.text((104, 1202), "Vellore Institute of Technology (VIT)", font=font(23), fill=MUTED)
+    draw.text((WIDTH - 910, 1160), "12,000", font=font(33, True), fill=ACCENT)
+    draw.text((WIDTH - 910, 1206), "synthetic text records", font=font(18), fill=MUTED)
+    draw.text((WIDTH - 610, 1160), "2,400", font=font(33, True), fill=BLUE)
+    draw.text((WIDTH - 610, 1206), "fictional holdings", font=font(18), fill=MUTED)
+    draw.text((WIDTH - 310, 1160), "2", font=font(33, True), fill=ROSE)
+    draw.text((WIDTH - 310, 1206), "live RSS publishers", font=font(18), fill=MUTED)
+    draw.text((WIDTH - 170, 1346), "01 / 07", font=font(20, True), fill=ACCENT)
+    return image
+
+
+def draw_problem() -> Image.Image:
+    image = slide_frame(
+        "The decision gap",
+        "The hard part is not finding a headline. It is translating it into an exposure decision.",
+        2, "01  |  Problem & approach",
+    )
+    draw = ImageDraw.Draw(image)
+    panel(draw, (96, 330, 1180, 1015), "ILLUSTRATIVE SCENARIO  ·  FICTIONAL COMPANY", AMBER)
+    draw.text((142, 408), "“Trade sanctions threaten", font=font(42, True), fill=WHITE)
+    draw.text((142, 465), "critical supply routes.”", font=font(42, True), fill=WHITE)
+    draw.text((142, 570), "One headline. Three analyst questions.", font=font(26, True), fill=AMBER)
+    prompts = [
+        ("01", "What kind of event is this?"),
+        ("02", "How adverse and how material?"),
+        ("03", "Which exposures should I inspect?"),
+    ]
+    y = 635
+    for n, text in prompts:
+        draw.ellipse((144, y, 185, y + 41), fill="#24364b")
+        draw.text((154, y + 9), n, font=font(17, True), fill=AMBER)
+        draw.text((210, y + 5), text, font=font(23), fill=WHITE)
+        y += 76
+    draw.text((142, 900), "SOURCE  ·  SYNTHETIC DEMO EXAMPLE", font=font(17, True), fill=MUTED)
+
+    panel(draw, (1230, 330, 2463, 1015), "FROM READING TO REVIEW", BLUE)
+    flow = [
+        ("01", "STRUCTURE", "Classify as Geopolitical"),
+        ("02", "PRIORITIZE", "Estimate sentiment + impact"),
+        ("03", "INVESTIGATE", "Apply a defined portfolio scenario"),
+    ]
+    y = 420
+    for n, title, body in flow:
+        draw.rounded_rectangle((1280, y, 1400, y + 92), radius=16, fill="#18314a")
+        draw.text((1310, y + 26), n, font=font(31, True), fill=BLUE)
+        draw.text((1440, y + 4), title, font=font(18, True), fill=BLUE)
+        draw.text((1440, y + 36), body, font=font(26, True), fill=WHITE)
+        y += 145
+    draw.text((1282, 890), "Decision support — not automated investment advice.", font=font(21), fill=MUTED)
+
+    draw.rounded_rectangle((98, 1070, 2463, 1234), radius=16, fill="#10283a", outline="#214b5c", width=2)
+    draw.text((130, 1095), "DESIGN PRINCIPLE", font=font(18, True), fill=ACCENT)
+    draw.text((130, 1140), "Keep source provenance, model output and scenario assumptions visible at every step.",
+              font=font(28, True), fill=WHITE)
+    return image
+
+
+def draw_architecture_slide(diagram: Image.Image) -> Image.Image:
+    # The standalone architecture image already has a title, legend and caveats.
+    # Preserve its native aspect ratio to prevent distortion on the slide.
+    return diagram.resize((WIDTH, HEIGHT), Image.Resampling.LANCZOS)
+
+
+def draw_engine() -> Image.Image:
+    image = slide_frame(
+        "How a headline becomes a signal",
+        "Four explicit stages produce an auditable signal contract — with model and rule responsibilities separated.",
+        4, "03  |  Implementation",
+    )
+    draw = ImageDraw.Draw(image)
+    cards = [
+        ("01", "INGEST & NORMALIZE", "#2ec4b6",
+         ["BBC + CNBC RSS", "Parallel 60-second polling", "Dedup + provenance tags"]),
+        ("02", "FINBERT SENTIMENT", BLUE,
+         ["Local ProsusAI FinBERT", "Positive / negative / neutral", "Signed confidence in [-1, 1]"]),
+        ("03", "EVENT CLASSIFICATION", AMBER,
+         ["Keyword-based event rules", "Five named event classes", "General Market fallback"]),
+        ("04", "IMPACT ESTIMATE", ROSE,
+         ["Category base score", "+ round(2 x |sentiment|)", "Clamped to [1, 10]"]),
+    ]
+    x0, y0, card_w, card_h, gap = 96, 360, 565, 410, 26
+    for idx, (number, title, color, lines) in enumerate(cards):
+        x = x0 + idx * (card_w + gap)
+        panel(draw, (x, y0, x + card_w, y0 + card_h), title, color)
+        draw.ellipse((x + 30, y0 + 82, x + 92, y0 + 144), fill="#1a2d43")
+        draw.text((x + 47, y0 + 96), number, font=font(21, True), fill=color)
+        yy = y0 + 178
+        for line in lines:
+            wrapped_text(draw, line, (x + 32, yy), card_w - 64, 22, WHITE, 1.35)
+            yy += 62
+        if idx < len(cards) - 1:
+            mid_y = y0 + card_h / 2
+            draw.line((x + card_w + 3, mid_y, x + card_w + gap - 6, mid_y), fill="#49677e", width=4)
+            draw.polygon(
+                [(x + card_w + gap - 6, mid_y), (x + card_w + gap - 20, mid_y - 10),
+                 (x + card_w + gap - 20, mid_y + 10)],
+                fill="#49677e",
+            )
+
+    panel(draw, (96, 820, 2464, 1198), "API SIGNAL CONTRACT", ACCENT)
+    fields = [
+        ("SENTIMENT", "-1.0 to +1.0"),
+        ("EVENT", "category label"),
+        ("IMPACT", "1 to 10"),
+        ("TRACEABILITY", "source · time · provenance"),
+    ]
+    field_w = 545
+    for idx, (label, detail) in enumerate(fields):
+        x = 134 + idx * 575
+        draw.text((x, 910), label, font=font(18, True), fill=ACCENT)
+        wrapped_text(draw, detail, (x, 950), field_w, 26, WHITE)
+    draw.text(
+        (132, 1085),
+        "Honest boundary: event classification and impact are heuristic rules; UI highlights are keyword cues, not FinBERT explanations.",
+        font=font(20), fill=MUTED,
+    )
+    return image
+
+
+def draw_stress() -> Image.Image:
+    image = slide_frame(
+        "Module B  |  From event to portfolio scenario",
+        "A geopolitical example using a fictional wholesale-style portfolio and a predefined shock vector.",
+        5, "04  |  Strategic stress testing",
+    )
+    draw = ImageDraw.Draw(image)
+    panel(draw, (96, 330, 1180, 820), "GEOPOLITICAL SHOCK ASSUMPTIONS", ROSE)
+    shock_rows = [
+        ("Equities", "-10.0%"),
+        ("Interest rates", "+2.0 pp"),
+        ("Credit spreads", "+1.5 pp"),
+        ("FX factor", "-5.0%"),
+    ]
+    y = 410
+    for label, value in shock_rows:
+        draw.text((145, y), label, font=font(24), fill=WHITE)
+        draw.text((880, y), value, font=font(24, True), fill=ROSE)
+        draw.line((145, y + 47, 1115, y + 47), fill="#253b53", width=2)
+        y += 82
+    draw.text((145, 755), "Trigger example: impact > 7  |  dashboard threshold = 8", font=font(19, True), fill=MUTED)
+
+    panel(draw, (1230, 330, 2463, 820), "BUNDLED SYNTHETIC DATASET RESULT", BLUE)
+    draw.text((1280, 415), "BASELINE", font=font(18, True), fill=MUTED)
+    draw.text((1280, 456), "GBP 14.69bn", font=font(49, True), fill=WHITE)
+    draw.text((1280, 545), "STRESSED VALUE", font=font(18, True), fill=MUTED)
+    draw.text((1280, 586), "GBP 13.39bn", font=font(49, True), fill=BLUE)
+    draw.rounded_rectangle((2075, 448, 2388, 682), radius=22, fill="#342231", outline=ROSE, width=2)
+    draw.text((2115, 480), "-8.80%", font=font(46, True), fill=ROSE)
+    draw.text((2120, 555), "-GBP 1.29bn", font=font(25, True), fill=WHITE)
+    draw.text((1280, 700), "2,400 holdings  ·  240 fictional issuers  ·  GBP", font=font(20), fill=MUTED)
+
+    panel(draw, (96, 875, 2463, 1198), "TRANSPARENT FIRST-ORDER SENSITIVITIES", ACCENT)
+    formulas = [
+        ("EQUITY", "value x beta x equity return"),
+        ("RATES", "-value x duration x rate change"),
+        ("CREDIT", "-value x credit duration x spread change"),
+        ("FX", "currency exposure x FX return"),
+    ]
+    col_w = 560
+    for idx, (label, formula) in enumerate(formulas):
+        x = 132 + idx * 575
+        draw.text((x, 960), label, font=font(18, True), fill=ACCENT)
+        wrapped_text(draw, formula, (x, 1002), col_w - 20, 20, WHITE, 1.38)
+    draw.text((132, 1138), "Estimate only: linear sensitivities, zero floor and simplified derivatives; not a calibrated forecast or valuation.",
+              font=font(19), fill=MUTED)
+    return image
+
+
+def draw_evidence() -> Image.Image:
+    image = slide_frame(
+        "Evidence, data and boundaries",
+        "A reproducible demo with public publisher inputs and explicitly fictional exposure data.",
+        6, "05  |  Results & validation",
+    )
+    draw = ImageDraw.Draw(image)
+    stats = [
+        ("2", "publisher RSS feeds", "#2ec4b6"),
+        ("12,000", "synthetic text records", AMBER),
+        ("2,400", "synthetic holdings", BLUE),
+        ("37", "tests passed at last run", ROSE),
+    ]
+    stat_w, stat_gap = 555, 32
+    for idx, (value, label, color) in enumerate(stats):
+        x = 96 + idx * (stat_w + stat_gap)
+        draw.rounded_rectangle((x, 340, x + stat_w, 505), radius=18, fill=CARD, outline="#243d57", width=2)
+        draw.text((x + 26, 362), value, font=font(48, True), fill=color)
+        draw.text((x + 28, 438), label, font=font(19, True), fill=MUTED)
+
+    panel(draw, (96, 555, 1230, 1055), "DATA PROVENANCE", "#2ec4b6")
+    draw.text((140, 635), "REAL", font=font(18, True), fill="#2ec4b6")
+    wrapped_text(draw, "BBC Business + CNBC public RSS; collection metadata retained; polled every 60 seconds.",
+                 (140, 675), 1010, 22, WHITE)
+    draw.text((140, 790), "SYNTHETIC", font=font(18, True), fill=AMBER)
+    wrapped_text(draw, "Seed 20261008. Fictional entities, news/social text, GBP holdings, and bounded sensitivities. No confidential client data.",
+                 (140, 830), 1010, 22, WHITE)
+    draw.text((140, 970), "No live Twitter/X integration or market-price stream.", font=font(19, True), fill=MUTED)
+
+    panel(draw, (1270, 555, 2463, 1055), "WHAT VERIFICATION MEANS", BLUE)
+    checks = [
+        ("VERIFIED", "Publisher collection, local inference path, API behavior, scenario math and tests."),
+        ("NOT CLAIMED", "Held-out FinBERT accuracy, calibrated impact prediction or measured analyst time saved."),
+        ("REPRODUCIBILITY", "Bundled CSV/JSONL, manifest, fixed seed and documented local run command."),
+    ]
+    y = 635
+    for label, body in checks:
+        draw.text((1315, y), label, font=font(17, True), fill=BLUE)
+        wrapped_text(draw, body, (1515, y - 1), 875, 19, WHITE, 1.35)
+        y += 120
+    draw.rounded_rectangle((96, 1100, 2463, 1215), radius=14, fill="#251d27", outline="#5b3c4a", width=2)
+    draw.text((128, 1125), "DOMAIN CAVEAT", font=font(17, True), fill=ROSE)
+    draw.text((340, 1125), "RSS polling is not push streaming. Synthetic scenario P&L is illustrative, not a forecast.",
+              font=font(22), fill=WHITE)
+    return image
+
+
+def draw_close() -> Image.Image:
+    image = slide_frame(
+        "A traceable path from news to risk review",
+        "Designed to support analyst triage and consistent what-if exploration — not replace expert judgment.",
+        7, "06  |  Domain impact & next steps",
+    )
+    draw = ImageDraw.Draw(image)
+    panel(draw, (96, 340, 1530, 925), "THE REVIEWER WALKTHROUGH", ACCENT)
+    demo_steps = [
+        ("01", "Confirm live source + FinBERT status"),
+        ("02", "Analyze the fictional Debt default case"),
+        ("03", "Set threshold 8; test Trade sanctions"),
+        ("04", "Inspect portfolio change + holding drivers"),
+        ("05", "Open API docs and synthetic-data manifest"),
+    ]
+    y = 432
+    for number, text in demo_steps:
+        draw.ellipse((138, y, 190, y + 52), fill="#203449")
+        draw.text((151, y + 13), number, font=font(16, True), fill=ACCENT)
+        draw.text((220, y + 10), text, font=font(24, True), fill=WHITE)
+        y += 91
+
+    panel(draw, (1580, 340, 2463, 925), "NEXT ITERATIONS", BLUE)
+    next_steps = [
+        "Evaluate on unseen headlines",
+        "Calibrate severity with expert labels",
+        "Improve entity-to-exposure mapping",
+        "Extend derivative valuation",
+    ]
+    y = 440
+    for text in next_steps:
+        draw.ellipse((1630, y + 5, 1648, y + 23), fill=BLUE)
+        wrapped_text(draw, text, (1674, y), 710, 21, WHITE)
+        y += 93
+    draw.text((1630, 825), "AI assistance used with review and disclosure.", font=font(16), fill=MUTED)
+
+    draw.rounded_rectangle((96, 1000, 2463, 1214), radius=20, fill="#10283a", outline="#285264", width=2)
+    draw.text((136, 1032), "TRACEABILITY", font=font(17, True), fill=ACCENT)
+    draw.text((136, 1072), "HEADLINE", font=font(30, True), fill=WHITE)
+    draw.text((393, 1072), "→", font=font(31, True), fill=ACCENT)
+    draw.text((455, 1072), "SIGNAL", font=font(30, True), fill=WHITE)
+    draw.text((655, 1072), "→", font=font(31, True), fill=ACCENT)
+    draw.text((718, 1072), "SCENARIO", font=font(30, True), fill=WHITE)
+    draw.text((953, 1072), "→", font=font(31, True), fill=ACCENT)
+    draw.text((1017, 1072), "PORTFOLIO IMPACT", font=font(30, True), fill=WHITE)
+    draw.text((136, 1145), "Public repo: github.com/shaaran-r/vit-sharan-r-hackathon",
+              font=font(18), fill=MUTED)
+    draw.text((WIDTH - 525, 1145), "Demo video: pending", font=font(18, True), fill=AMBER)
+    return image
+
+
+def interactive_html(slides: list[Image.Image], notes: list[str]) -> str:
+    encoded_slides = []
+    for slide in slides:
+        output = BytesIO()
+        slide.save(output, format="PNG", optimize=True)
+        encoded_slides.append(base64.b64encode(output.getvalue()).decode("ascii"))
+    images = "\n".join(
+        f'<img class="deck-slide{" active" if idx == 0 else ""}" src="data:image/png;base64,{data}" alt="Slide {idx + 1} of 7" />'
+        for idx, data in enumerate(encoded_slides)
+    )
+    nav = "".join(
+        f'<button type="button" class="dot{" active" if idx == 0 else ""}" aria-label="Go to slide {idx + 1}" aria-current="{"true" if idx == 0 else "false"}" data-slide="{idx}">{idx + 1:02d}</button>'
+        for idx in range(len(slides))
+    )
+    notes_html = "".join(
+        f'<section class="note{" active" if idx == 0 else ""}" data-note="{idx}"><strong>Slide {idx + 1} presenter note</strong><p>{html.escape(note)}</p></section>'
+        for idx, note in enumerate(notes)
+    )
+    return f"""<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#08111f"><title>Signal &amp; Stress | Interactive Jury Deck</title>
+<style>
+:root{{--bg:#08111f;--panel:#102137;--ink:#eef5ff;--muted:#b6c7da;--accent:#63d6c4}}
+*{{box-sizing:border-box}}body{{margin:0;background:var(--bg);color:var(--ink);font-family:Segoe UI,Arial,sans-serif}}
+.top{{height:56px;display:flex;align-items:center;justify-content:space-between;padding:0 22px;border-bottom:1px solid #294056}}
+.brand{{font-weight:700;letter-spacing:.04em}}.actions{{display:flex;gap:8px}}
+button,a{{font:inherit}}.actions button,.actions a,.controls button,.dot{{color:var(--ink);background:var(--panel);border:1px solid #36516b;border-radius:8px;padding:9px 12px;text-decoration:none;cursor:pointer}}
+button:hover,.actions a:hover,.dot:hover{{border-color:var(--accent)}}button:focus-visible,a:focus-visible{{outline:3px solid var(--accent);outline-offset:2px}}
+main{{min-height:calc(100vh - 125px);display:grid;place-items:center;padding:22px}}
+.stage{{width:min(94vw,calc((100vh - 205px)*1.7778));position:relative;box-shadow:0 24px 70px #0009;border:1px solid #294056;border-radius:10px;overflow:hidden;background:#08111f}}
+.deck-slide{{display:none;width:100%;height:auto;aspect-ratio:16/9}}.deck-slide.active{{display:block;animation:enter .24s ease-out}}
+@keyframes enter{{from{{opacity:.5;transform:translateY(4px)}}to{{opacity:1;transform:none}}}}
+.controls{{display:flex;align-items:center;justify-content:center;gap:10px;padding:10px}}
+.dots{{display:flex;gap:5px}}.dot{{padding:6px 9px;font-size:.8rem}}.dot.active{{border-color:var(--accent);color:var(--accent);background:#12313a}}
+.counter{{min-width:66px;text-align:center;color:var(--muted);font-variant-numeric:tabular-nums}}
+.notes{{max-width:960px;margin:0 auto 24px;padding:0 18px}}.note{{display:none;color:var(--muted);line-height:1.5}}.note.active{{display:block}}
+.note strong{{color:var(--accent)}}.note p{{margin:6px 0}}
+@media(max-width:650px){{.top{{padding:0 10px}}.brand{{font-size:.85rem}}.actions button,.actions a{{padding:7px;font-size:.78rem}}main{{padding:10px}}.dots{{gap:2px}}.dot{{padding:5px 6px;font-size:.7rem}}}}
+@media(prefers-reduced-motion:reduce){{*,*::before,*::after{{animation:none!important;scroll-behavior:auto!important}}}}
+</style></head>
+<body><header class="top"><div class="brand">SIGNAL &amp; STRESS <span style="color:var(--muted);font-weight:400">| JURY PRESENTATION</span></div>
+<div class="actions"><a href="https://github.com/shaaran-r/vit-sharan-r-hackathon" target="_blank" rel="noopener">Repository ↗</a><a href="presentation.pdf" download>Download PDF ↓</a><button id="full" type="button">Fullscreen</button></div></header>
+<main><div class="stage" aria-live="polite" aria-label="Presentation slides">{images}</div></main>
+<nav class="controls" aria-label="Slide controls"><button id="prev" type="button" aria-label="Previous slide">← Prev</button><div class="dots">{nav}</div><span class="counter" id="counter">01 / 07</span><button id="next" type="button" aria-label="Next slide">Next →</button></nav>
+<aside class="notes" aria-live="polite">{notes_html}</aside>
+<script>
+const slides=[...document.querySelectorAll('.deck-slide')],dots=[...document.querySelectorAll('.dot')],notes=[...document.querySelectorAll('.note')],counter=document.getElementById('counter');let current=0;
+function go(i){{current=(i+slides.length)%slides.length;slides.forEach((x,n)=>x.classList.toggle('active',n===current));dots.forEach((x,n)=>{{x.classList.toggle('active',n===current);x.setAttribute('aria-current',n===current?'true':'false')}});notes.forEach((x,n)=>x.classList.toggle('active',n===current));counter.textContent=String(current+1).padStart(2,'0')+' / '+String(slides.length).padStart(2,'0')}}
+document.getElementById('prev').onclick=()=>go(current-1);document.getElementById('next').onclick=()=>go(current+1);dots.forEach(x=>x.onclick=()=>go(Number(x.dataset.slide)));
+document.getElementById('full').onclick=()=>document.fullscreenElement?document.exitFullscreen():document.querySelector('.stage').requestFullscreen();
+document.addEventListener('keydown',e=>{{if(['ArrowRight','PageDown',' '].includes(e.key)){{e.preventDefault();go(current+1)}}else if(['ArrowLeft','PageUp'].includes(e.key)){{e.preventDefault();go(current-1)}}else if(e.key==='Home')go(0);else if(e.key==='End')go(slides.length-1)}});
+</script></body></html>"""
+
+
 def main():
     OUT.mkdir(parents=True, exist_ok=True)
     diagram = architecture()
     diagram.save(OUT / "architecture.png", dpi=(200, 200))
-    slides = []
-    first = page("From headlines to portfolio risk",
-                 "A unified AI/NLP risk engine with Module B: strategic event-driven stress testing.", 1)
-    bullets(first, [
-        ("CANDIDATE", "SHARAN R | VELLORE INSTITUTE OF TECHNOLOGY (VIT) | sharan.r2022@vitstudent.ac.in"),
-        ("PROBLEM", "Risk analysts must connect unstructured financial news to portfolio exposures quickly and traceably."),
-        ("APPROACH", "Real publisher news -> structured risk signals -> hypothetical shocks -> before/after portfolio estimates."),
-        ("DEMO SCOPE", "A locally runnable Python prototype. No investment advice, production valuation or guaranteed predictions."),
-    ])
-    slides.append(first)
-    second = page("One engine, modular applications",
-                  "FastAPI | Streamlit | PyTorch + Transformers | pandas | RSS background worker", 2)
-    resized = diagram.resize((2240, 1000))
-    second.paste(resized, (160, 310))
-    slides.append(second)
-    third = page("Dataset used: real + clearly fictional",
-                 "Self-generated synthetic data is permitted by the supplied dataset clarification.", 3)
-    bullets(third, [
-        ("REAL INPUTS", "BBC and CNBC RSS: up to 25 headlines each, collected every 60 seconds. URLs and publication times retained."),
-        ("DETAILED SYNTHETIC DATA", "12,000 fictional news/social records; 2,400 holdings; 240 issuers; 5 asset types, 6 sectors and 4 regions."),
-        ("REPRODUCIBLE DEMO", "Seed 20261008; CSV/JSONL datasets and generation manifest. Optional replay emits 6 events every 10 seconds."),
-        ("ASSUMPTIONS", "GBP values and bounded sensitivities are fictional. No actual bank transactions, calibrated distributions or live social posts."),
-    ])
-    slides.append(third)
-    fourth = page("Explainable workflow, honest model scope",
-                  "Pretrained sentiment is active; event and severity rules remain illustrative.", 4)
-    bullets(fourth, [
-        ("SIGNAL CONTRACT", "Sentiment [-1, 1], event category, impact [1, 10], source, timestamp and provenance available through JSON APIs."),
-        ("NLP VERIFICATION", "Official local FinBERT: positive +0.84, negative -0.82, neutral 0.00 on three smoke-test sentences, not a benchmark."),
-        ("FAST INSPECTION", "Six editable cases, source/category filters, downloads, cue highlights and explicit stress-threshold explanations."),
-        ("BOUNDARIES", "Keyword cues are not FinBERT attributions. Impact is not a calibrated prediction; negation and factual accuracy are not resolved."),
-    ])
-    slides.append(fourth)
-    fifth = page("Module B: quantify hypothetical stress",
-                 "A geopolitical scenario illustrates the baseline-to-stressed portfolio workflow.", 5)
-    bullets(fifth, [
-        ("EVENT-DRIVEN TRIGGER", "Risk category and impact drive the scenario. Default threshold >=7; select 8 for the example impact >7."),
-        ("ILLUSTRATIVE SHOCKS", "Geopolitical: equity -10%, rates +2 percentage points, spreads +1.5 points, FX -5%."),
-        ("BUNDLED DATASET RESULT", "GBP 14,685,727,454.43 baseline -> GBP 13,392,991,408.98 stressed value: approximately -8.80%."),
-        ("INTERPRETATION", "Holding P&L and asset-class charts support risk review. Linear sensitivities and zero-clipping are simplified; scenarios are independent."),
-    ])
-    slides.append(fifth)
-    sixth = page("Validated prototype, reviewer-ready demo",
-                 "Business value: traceability from a published headline to an estimated portfolio exposure change.", 6)
-    bullets(sixth, [
-        ("VERIFICATION", "37 tests passed at last validation. Both real publishers, trained inference and unattended collection were verified."),
-        ("REVIEWER WALKTHROUGH", "Confirm model/source status -> load Debt default -> analyze cues -> inspect stress impact -> open Dataset studio and API docs."),
-        ("RUN LOCALLY", "Install requirements; generate datasets; prepare official FinBERT; run python run_demo.py. Dashboard: localhost:8501."),
-        ("NEXT STEPS & SUBMISSION", "Evaluate unseen headlines and calibrate impact. Public repo: vit-sharan-r-hackathon (pending). Demo video URL: pending."),
-    ])
-    slides.append(sixth)
+
+    slides = [
+        draw_cover(),
+        draw_problem(),
+        draw_architecture_slide(diagram),
+        draw_engine(),
+        draw_stress(),
+        draw_evidence(),
+        draw_close(),
+    ]
     slides[0].save(OUT / "presentation.pdf", save_all=True, append_images=slides[1:], resolution=160)
-    print(f"Saved {len(slides)} slides and a detailed architecture diagram in {OUT}")
+
+    presenter_notes = [
+        "Introduce the project, candidate and scope. State that this is the AI/NLP Risk Engine plus Module B.",
+        "Frame the illustrative headline as fictional. Explain that the aim is a traceable review workflow, not automatic trading.",
+        "Walk from source through processing and serving to stress testing. Mention RSS polling is not publisher push streaming.",
+        "Explain FinBERT sentiment separately from rule-based event classification and impact. The impact formula is a heuristic, not a trained severity model.",
+        "Read the displayed portfolio values. The bundled reference is GBP 14.69bn to GBP 13.39bn, about -8.80%; do not present it as a forecast.",
+        "Distinguish implementation tests and smoke checks from held-out accuracy, calibration, or measured business savings.",
+        "Finish with the analyst workflow and next steps. Demo video is pending; only claim AI-use statements that are true for your work.",
+    ]
+    (OUT / "presentation.html").write_text(
+        interactive_html(slides, presenter_notes), encoding="utf-8"
+    )
+    print(f"Saved architecture PNG and {len(slides)}-slide PDF + interactive HTML deck in {OUT}")
 
 
 if __name__ == "__main__":

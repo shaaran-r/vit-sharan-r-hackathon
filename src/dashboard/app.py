@@ -77,6 +77,65 @@ st.markdown(
     .cue-negative { background: #632638; color: #ffe5e9; }
     .cue-positive { background: #155444; color: #d7fff0; }
     .cue-trigger { background: #665016; color: #fff1bf; }
+    .hero { position: relative; overflow: hidden; }
+    .hero::before {
+        content: ""; position: absolute; inset: 0; pointer-events: none;
+        background: linear-gradient(110deg, transparent 25%, rgba(99, 214, 196, .08) 50%, transparent 75%);
+        background-size: 250% 100%; animation: signal-sweep 12s ease-in-out infinite;
+    }
+    .hero > * { position: relative; }
+    .signal-flow {
+        display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+        margin-top: 22px;
+    }
+    .flow-stage {
+        padding: 10px 16px; border: 1px solid rgba(99, 214, 196, .25);
+        border-radius: 10px; background: rgba(8, 17, 31, .5);
+        color: #d8f5ee; font-size: .85rem; font-weight: 650;
+        transition: border-color .2s ease, transform .2s ease;
+    }
+    .flow-stage:hover { transform: translateY(-2px); border-color: #63d6c4; }
+    .flow-link {
+        width: 54px; height: 2px; background: rgba(99, 214, 196, .22);
+        position: relative;
+    }
+    .flow-link::after {
+        content: ""; position: absolute; top: -3px; left: 0;
+        width: 8px; height: 8px; border-radius: 50%; background: #63d6c4;
+        box-shadow: 0 0 12px rgba(99, 214, 196, .7);
+        animation: signal-travel 3s ease-in-out infinite;
+    }
+    .flow-link-delayed::after { animation-delay: 1.5s; }
+    .flow-caption { margin-top: 10px; color: #9aabc2; font-size: .72rem; }
+    [data-testid="stMetric"] {
+        transition: border-color .2s ease, box-shadow .2s ease;
+    }
+    [data-testid="stMetric"]:hover {
+        border-color: rgba(99, 214, 196, .5);
+        box-shadow: 0 6px 24px rgba(0, 0, 0, .18);
+    }
+    @keyframes signal-sweep {
+        0%, 100% { background-position: 100% 0; }
+        50% { background-position: 0 0; }
+    }
+    @keyframes signal-travel {
+        0% { transform: translateX(0); opacity: 0; }
+        20%, 80% { opacity: 1; }
+        100% { transform: translateX(46px); opacity: 0; }
+    }
+    @media (max-width: 640px) {
+        .signal-flow { gap: 8px; }
+        .flow-stage { padding: 8px 10px; font-size: .75rem; }
+        .flow-link { width: 20px; }
+        .flow-link::after { animation: none; width: 4px; height: 4px; top: -1px; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+        .hero::before, .flow-link::after { animation: none; }
+        .flow-stage, [data-testid="stMetric"],
+        div.stButton > button, div.stFormSubmitButton > button { transition: none; }
+        .flow-stage:hover, div.stButton > button:hover,
+        div.stFormSubmitButton > button:hover { transform: none; }
+    }
     </style>
     """,
     unsafe_allow_html=True,
@@ -173,6 +232,14 @@ st.markdown(
       <div class="hero-kicker">Financial risk intelligence · Live workbench</div>
       <h1>Signal &amp; Stress</h1>
       <p>Real publisher news meets a clearly labeled, continuously replayed simulation. Explore thousands of fictional exposures and hypothetical risk scenarios.</p>
+      <div class="signal-flow" aria-label="Workflow: headlines to NLP risk signals to portfolio stress">
+        <span class="flow-stage">01 · Headlines</span>
+        <span class="flow-link" aria-hidden="true"></span>
+        <span class="flow-stage">02 · NLP risk signals</span>
+        <span class="flow-link flow-link-delayed" aria-hidden="true"></span>
+        <span class="flow-stage">03 · Portfolio stress</span>
+      </div>
+      <div class="flow-caption">Animated workflow illustration · Actual collection status is reported below</div>
     </div>
     """,
     unsafe_allow_html=True,
@@ -204,7 +271,6 @@ with st.sidebar:
         st.cache_data.clear()
         st.rerun()
     st.divider()
-    st.caption(f"API: {API_URL}")
     st.caption("Signals are demonstration outputs, not investment advice.")
 
 
