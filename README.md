@@ -3,7 +3,7 @@
 **Candidate Name:** SHARAN R  
 **College Email ID:** sharan.r2022@vitstudent.ac.in  
 **College / Campus:** VELLORE INSTITUTE OF TECHNOLOGY (VIT)  
-**Demo Video Link:** PENDING - add a public or unlisted demo video URL before submission  
+**Demo Video Link:** PENDING - (https://www.youtube.com/watch?v=ZPv2rUbuRqI)  
 **Slide Deck Link:** [Six-slide presentation](docs/presentation.pdf)  
 **Public Repository:** [vit-sharan-r-hackathon](https://github.com/shaaran-r/vit-sharan-r-hackathon)
 
